@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>反应天梯 · Reflex Ladder</title>
+<style>
+:root{
+  --bg:#0b0e14; --panel:#131926; --panel2:#0f1420;
+  --cyan:#22d3ee; --magenta:#f472b6; --gold:#fbbf24;
+  --text:#e5eef7; --dim:#8b9bb4; --red:#ef4444; --green:#22ff9a; --blue:#3b82f6;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;overflow-x:hidden}
+#app{max-width:520px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding:16px;padding-top:calc(16px + var(--safe-top,0px))}
+.screen{display:none;flex-direction:column;gap:14px;flex:1}
+.screen.active{display:flex}
+
+/* 开始页 */
+.home-hero{text-align:center;padding:14px 0 0}
+.hero-ms{font-size:15px;color:var(--dim);letter-spacing:2px}
+.hero-ms span{font-size:64px;font-weight:800;color:var(--cyan);text-shadow:0 0 24px rgba(34,211,238,.55);letter-spacing:0}
+.hero-ms small{margin-left:6px}
+.game-title{font-size:44px;font-weight:900;letter-spacing:4px;margin-top:2px}
+.game-title .neon{color:var(--magenta);text-shadow:0 0 22px rgba(244,114,182,.6)}
+.slogan{color:var(--dim);margin-top:8px;font-size:15px}
+.ladder-steps{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px}
+.ladder-steps span{font-size:12px;color:var(--dim);border:1px solid #26314a;border-radius:999px;padding:3px 10px;background:var(--panel2)}
+.ladder-steps span.top{color:#0b0e14;background:var(--gold);border-color:var(--gold);font-weight:700}
+.home-rank{text-align:center;font-size:16px;color:var(--gold);min-height:22px}
+.home-rank b{font-size:19px}
+.btn-primary{background:linear-gradient(90deg,var(--cyan),#0ea5c6);color:#04121a;border:none;border-radius:14px;padding:16px;font-size:19px;font-weight:800;letter-spacing:2px;cursor:pointer;min-height:56px}
+.btn-primary:active{transform:scale(.98)}
+.btn-ghost{background:transparent;color:var(--dim);border:1px solid #26314a;border-radius:12px;padding:12px;font-size:15px;cursor:pointer;min-height:48px}
+.practice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-practice{background:var(--panel);color:var(--text);border:1px solid #1e2a44;border-radius:12px;padding:14px 8px;font-size:16px;font-weight:700;cursor:pointer;min-height:52px}
+.btn-practice:active{border-color:var(--cyan)}
+.home-modes{display:flex;flex-direction:column;gap:10px}
+.mode-card{background:var(--panel);border:1px solid #1e2a44;border-radius:14px;padding:12px 16px}
+.mode-desc{color:var(--dim);font-size:13px;line-height:1.6}
+.home-best{font-size:14px;color:var(--gold);text-align:center;min-height:20px;line-height:1.6}
+.device-line{text-align:center;color:var(--dim);font-size:13px}
+.foot-note{text-align:center;color:#5b6b84;font-size:12px;line-height:1.6}
+
+/* 对局 */
+.hud{display:flex;justify-content:space-between;font-size:15px;color:var(--dim);padding:2px 2px}
+.arena{position:relative;flex:1;min-height:360px;border-radius:18px;border:1px solid #1e2a44;background:var(--panel2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden}
+.flash-wait{background:#3d1420;border-color:#5b1f30}
+.flash-go{background:#0d3d28;border-color:#166a45}
+.flash-idle{background:var(--panel2)}
+.arena-big{font-size:34px;font-weight:800;text-align:center;padding:0 16px}
+.arena-sub{color:var(--dim);font-size:14px;text-align:center;padding:0 20px;line-height:1.6}
+.arena-pop{position:absolute;top:15%;left:0;right:0;text-align:center;font-size:38px;font-weight:900;color:var(--cyan);text-shadow:0 0 18px rgba(34,211,238,.7);pointer-events:none;opacity:0;transition:opacity .12s;z-index:5}
+.arena-pop.show{opacity:1}
+.center-tip{position:absolute;top:14px;left:0;right:0}
+.target{position:absolute;border-radius:50%;background:radial-gradient(circle,var(--magenta) 0 26%,#fff 27% 45%,var(--cyan) 46% 68%,rgba(34,211,238,.25) 69% 100%);box-shadow:0 0 20px rgba(244,114,182,.55);cursor:pointer;z-index:3}
+.target-core{position:absolute;inset:38%;border-radius:50%;background:#fff}
+.instr{text-align:center;font-size:20px;background:var(--panel);border:1px solid #1e2a44;border-radius:12px;padding:12px}
+.instr b{font-size:24px}
+.instr.flash{border-color:var(--gold);color:var(--gold)}
+.ctarget{position:absolute;width:84px;height:84px;border-radius:50%;cursor:pointer;z-index:3;box-shadow:0 0 16px rgba(0,0,0,.4)}
+.ctarget.red{background:radial-gradient(circle,#fca5a5,#ef4444 65%)}
+.ctarget.blue{background:radial-gradient(circle,#93c5fd,#2563eb 65%)}
+.stim{width:190px;height:190px;border-radius:50%;z-index:3;cursor:pointer}
+.stim.go{background:radial-gradient(circle,#86ffb9,#16a34a 70%);box-shadow:0 0 30px rgba(34,255,154,.5)}
+.stim.nogo{background:radial-gradient(circle,#fca5a5,#dc2626 70%);box-shadow:0 0 30px rgba(239,68,68,.5);display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:900;color:#fff}
+#stop-arena .arena-big{position:absolute;bottom:12%;left:0;right:0}
+#stop-arena .arena-sub{position:absolute;bottom:5%;left:0;right:0}
+
+/* M3：模式入口 / XP / 成就 */
+.mode-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.btn-mode{background:var(--panel);color:var(--text);border:1px solid #1e2a44;border-radius:12px;padding:13px 4px;font-size:15px;font-weight:700;cursor:pointer;min-height:52px}
+.btn-mode:active{border-color:var(--magenta)}
+.xp-line{text-align:center;color:var(--cyan);font-size:14px;min-height:20px}
+.daily-line{text-align:center;color:var(--dim);font-size:13px;min-height:18px;line-height:1.6}
+.ach-wrap{background:var(--panel);border:1px solid #1e2a44;border-radius:14px;padding:12px 14px}
+.ach-title{font-size:15px;margin-bottom:10px;color:var(--text)}
+.ach-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ach-item{border:1px solid #26314a;border-radius:10px;padding:8px 10px;font-size:12px;color:#5b6b84;line-height:1.5}
+.ach-item b{display:block;font-size:13px;color:#5b6b84}
+.ach-item.on{border-color:var(--gold);color:var(--dim);background:rgba(251,191,36,.07)}
+.ach-item.on b{color:var(--gold)}
+
+/* 排行榜 */
+.btn-lb-entry{width:100%}
+.lb-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lb-tab{background:var(--panel);color:var(--dim);border:1px solid #1e2a44;border-radius:10px;padding:11px 4px;font-size:14px;font-weight:700;cursor:pointer}
+.lb-tab.active{color:#04121a;background:linear-gradient(90deg,var(--cyan),#0ea5c6);border-color:transparent}
+.lb-my{text-align:center;font-size:17px;color:var(--gold);min-height:24px}
+.lb-status{text-align:center;color:var(--dim);font-size:13px;min-height:18px}
+.lb-list{display:flex;flex-direction:column}
+.lb-row{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:10px;padding:11px 10px;border-bottom:1px solid #1e2a44;font-size:15px}
+.lb-row .lb-rank{color:var(--dim);font-weight:800;text-align:center}
+.lb-row.top1 .lb-rank{color:var(--gold)}
+.lb-row.top2 .lb-rank{color:#cbd5e1}
+.lb-row.top3 .lb-rank{color:#d08a4e}
+.lb-row.me{background:rgba(34,211,238,.10);border-radius:10px}
+.lb-row .lb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-row .lb-name .me-tag{color:var(--cyan);font-size:11px;border:1px solid var(--cyan);border-radius:4px;padding:0 4px;margin-left:6px}
+.lb-row .lb-score{font-weight:800;color:var(--text)}
+
+/* 幽灵条 */
+.ghost-bar{background:var(--panel);border:1px solid #1e2a44;border-radius:10px;padding:9px 12px;font-size:14px;color:var(--magenta);text-align:center}
+
+/* 地狱 */
+.hell-timebar{height:10px;background:#1e2a44;border-radius:99px;overflow:hidden}
+#hell-timefill{height:100%;width:100%;background:linear-gradient(90deg,var(--red),var(--gold));transition:width .12s linear}
+.hell-time{text-align:center;font-size:34px;font-weight:900;color:var(--gold)}
+#hell-stim{position:absolute;border-radius:50%;cursor:pointer;z-index:3}
+#hell-stim.tap{background:radial-gradient(circle,#86ffb9,#16a34a 70%);box-shadow:0 0 26px rgba(34,255,154,.55)}
+#hell-stim.target{background:radial-gradient(circle,var(--magenta) 0 26%,#fff 27% 45%,var(--cyan) 46% 68%,rgba(34,211,238,.25) 69% 100%);box-shadow:0 0 20px rgba(244,114,182,.55)}
+#hell-stim.nogo{background:radial-gradient(circle,#fca5a5,#dc2626 70%);box-shadow:0 0 26px rgba(239,68,68,.5);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff}
+.revive-box{background:var(--panel);border:1px solid var(--gold);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;text-align:center}
+
+/* 覆盖层 / 弹窗 / 海报 / toast */
+.overlay{position:fixed;inset:0;background:rgba(4,6,12,.88);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}
+.overlay[hidden]{display:none}
+.overlay-box{background:var(--panel);border:1px solid #26314a;border-radius:18px;padding:22px;max-width:440px;width:100%;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+.ad-badge{align-self:flex-start;background:#26314a;color:var(--dim);font-size:12px;padding:2px 10px;border-radius:99px}
+.ad-text{font-size:17px;line-height:1.7;color:var(--text)}
+.ad-text small{color:var(--dim)}
+.ad-count{font-size:56px;font-weight:900;color:var(--cyan)}
+.poster-box img{max-width:100%;border-radius:12px}
+.poster-hint{color:var(--dim);font-size:13px}
+.toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);background:#12233a;border:1px solid var(--gold);color:var(--gold);padding:11px 20px;border-radius:99px;font-size:15px;font-weight:700;opacity:0;pointer-events:none;transition:all .3s;z-index:80;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 过渡屏 */
+.inter-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;flex:1;justify-content:center;text-align:center}
+.inter-next{color:var(--dim);font-size:16px;letter-spacing:6px}
+.inter-dim{font-size:42px;font-weight:900}
+.inter-rule{color:var(--dim);font-size:15px;line-height:1.7;padding:0 24px;min-height:52px}
+.inter-count{font-size:88px;font-weight:900;color:var(--cyan);text-shadow:0 0 28px rgba(34,211,238,.6);min-height:110px}
+.inter-wrap .btn-ghost{width:220px}
+
+/* 结算 */
+.result-title{text-align:center;font-size:24px;letter-spacing:2px}
+.result-combo{text-align:center}
+.result-combo span{font-size:58px;font-weight:900;color:var(--gold);text-shadow:0 0 22px rgba(251,191,36,.45)}
+.result-combo small{display:block;color:var(--dim);font-size:12px;margin-top:2px}
+.rank-line{text-align:center;font-size:16px;line-height:1.7}
+.rank-line b{color:var(--gold);font-size:20px}
+.radar-wrap{display:flex;justify-content:center}
+.result-cards{display:flex;flex-direction:column;gap:10px}
+.rcard{background:var(--panel);border:1px solid #1e2a44;border-radius:14px;padding:14px 16px}
+.rcard-name{font-size:16px;font-weight:700}
+.rcard-big span{font-size:38px;font-weight:900;color:var(--cyan)}
+.rcard-big small{color:var(--dim);font-size:13px;margin-left:6px}
+.rcard-detail{color:var(--dim);font-size:13px;line-height:1.7;margin-top:4px;word-break:break-all}
+.diagnosis{background:#12233a;border:1px solid #1d3a5f;border-radius:12px;padding:12px 14px;font-size:15px;line-height:1.6}
+.device-note{color:#5b6b84;font-size:12px;text-align:center;line-height:1.6}
+.result-btns{display:flex;flex-direction:column;gap:10px}
+@media (max-width:380px){.game-title{font-size:38px}.arena{min-height:330px}.stim{width:160px;height:160px}}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 开始页 -->
+  <section id="screen-home" class="screen active">
+    <div class="home-hero">
+      <div class="hero-ms"><span>167</span><small>ms · 示例</small></div>
+      <h1 class="game-title">反应<span class="neon">天梯</span></h1>
+      <p class="slogan">200ms 是人类，150ms 是天才，你呢？</p>
+      <div class="ladder-steps" aria-hidden="true">
+        <span>青铜</span><span>白银</span><span>黄金</span><span>铂金</span><span>钻石</span><span>大师</span><span>王者</span><span class="top">封神</span>
+      </div>
+    </div>
+    <div class="home-rank" id="home-rank"></div>
+    <div class="xp-line" id="xp-line"></div>
+    <button id="btn-ladder" class="btn-primary">开始天梯局 · 四维全测</button>
+    <div class="practice-grid">
+      <button class="btn-practice" data-dim="flash">⚡ 专练闪击</button>
+      <button class="btn-practice" data-dim="sniper">🎯 专练狙击</button>
+      <button class="btn-practice" data-dim="choice">🔀 专练抉择</button>
+      <button class="btn-practice" data-dim="stop">🛑 专练止步</button>
+    </div>
+    <div class="mode-grid">
+      <button id="btn-daily" class="btn-mode">📅 每日挑战</button>
+      <button id="btn-hell" class="btn-mode">🔥 地狱 60 秒</button>
+      <button id="btn-ghost" class="btn-mode">👻 幽灵竞速</button>
+    </div>
+    <button id="btn-leaderboard" class="btn-mode btn-lb-entry">🏆 排行榜 · 全服比一比</button>
+    <button id="btn-desktop" class="btn-ghost" hidden>📲 添加到桌面，下次直接开打</button>
+    <div class="daily-line" id="daily-line"></div>
+    <div class="home-modes">
+      <div class="mode-card"><div class="mode-desc">⚡ 闪击 7 次取中位 · 🎯 狙击 10 靶复合分 · 🔀 抉择 12 题看指令打色 · 🛑 止步 14 题该忍就忍。段位取最近 5 局综合分中位数，专练不计段位。</div></div>
+    </div>
+    <div class="home-best" id="home-best"></div>
+    <div class="ach-wrap">
+      <h3 class="ach-title">成就墙</h3>
+      <div class="ach-grid" id="ach-grid"></div>
+    </div>
+    <div class="device-line" id="device-line">设备档检测中…</div>
+    <p class="foot-note">成绩为本设备测得值，含屏幕与触控延迟（手机链路可达 35-140ms）；同设备对比最准，别拿手机成绩跟电脑比。</p>
+  </section>
+
+  <!-- 闪击 -->
+  <section id="screen-flash" class="screen">
+    <div class="hud"><span id="flash-progress">闪击 0/7</span><span id="flash-fouls"></span></div>
+    <div id="flash-arena" class="arena flash-wait">
+      <div id="flash-text" class="arena-big">点击开始</div>
+      <div id="flash-sub" class="arena-sub">变绿后立刻点任意位置，抢跑作废</div>
+      <div id="flash-last" class="arena-pop"></div>
+    </div>
+    <button class="btn-ghost" data-quit>放弃本局</button>
+  </section>
+
+  <!-- 狙击 -->
+  <section id="screen-sniper" class="screen">
+    <div class="hud"><span id="sniper-progress">狙击 0/10</span><span id="sniper-hits"></span></div>
+    <div id="ghost-bar" class="ghost-bar" hidden></div>
+    <div id="sniper-arena" class="arena">
+      <div id="sniper-tip" class="arena-sub center-tip">靶子即将出现，点中它！</div>
+      <div id="sniper-target" class="target" hidden><div class="target-core"></div></div>
+      <div id="sniper-pop" class="arena-pop"></div>
+    </div>
+    <button class="btn-ghost" data-quit>放弃本局</button>
+  </section>
+
+  <!-- 抉择 -->
+  <section id="screen-choice" class="screen">
+    <div class="hud"><span id="choice-progress">抉择 0/12</span><span id="choice-right"></span></div>
+    <div id="choice-instr" class="instr">只打：<b id="choice-instr-color">—</b></div>
+    <div id="choice-arena" class="arena">
+      <div id="choice-tip" class="arena-sub center-tip">看清指令，只点指定颜色</div>
+      <div id="choice-a" class="ctarget" hidden></div>
+      <div id="choice-b" class="ctarget" hidden></div>
+      <div id="choice-pop" class="arena-pop"></div>
+    </div>
+    <button class="btn-ghost" data-quit>放弃本局</button>
+  </section>
+
+  <!-- 止步 -->
+  <section id="screen-stop" class="screen">
+    <div class="hud"><span id="stop-progress">止步 0/14</span><span id="stop-right"></span></div>
+    <div id="stop-arena" class="arena">
+      <div id="stop-stim" class="stim" hidden></div>
+      <div id="stop-text" class="arena-big">准备</div>
+      <div id="stop-sub" class="arena-sub">绿圈出现就点，红圈带 ✕ 绝对不要点</div>
+      <div id="stop-pop" class="arena-pop"></div>
+    </div>
+    <button class="btn-ghost" data-quit>放弃本局</button>
+  </section>
+
+  <!-- 排行榜 -->
+  <section id="screen-leaderboard" class="screen">
+    <h2 class="result-title">🏆 排行榜</h2>
+    <div class="lb-tabs" id="lb-tabs">
+      <button class="lb-tab active" data-board="combo_std">综合·标准档</button>
+      <button class="lb-tab" data-board="combo_high">综合·高刷档</button>
+      <button class="lb-tab" data-board="daily">今日每日榜</button>
+      <button class="lb-tab" data-board="hell">地狱榜</button>
+    </div>
+    <div class="lb-my" id="lb-my">我的名次：—</div>
+    <div class="lb-status" id="lb-status"></div>
+    <div class="lb-list" id="lb-list"></div>
+    <p class="device-note" id="lb-note"></p>
+    <button id="btn-lb-home" class="btn-ghost">回主页</button>
+  </section>
+
+  <!-- 地狱 60 秒 -->
+  <section id="screen-hell" class="screen">
+    <div class="hud"><span id="hell-score">得分 0</span><span id="hell-count"></span></div>
+    <div class="hell-timebar"><div id="hell-timefill"></div></div>
+    <div class="hell-time" id="hell-time">60.0</div>
+    <div id="hell-arena" class="arena">
+      <div id="hell-tip" class="arena-sub center-tip">绿的点它 · 小靶点它 · 红 ✕ 忍住别点</div>
+      <div id="hell-stim" hidden></div>
+      <div id="hell-pop" class="arena-pop"></div>
+    </div>
+    <div id="hell-revive" class="revive-box" hidden>
+      <p>时间到！本局已用复活：<span id="hell-revive-state"></span></p>
+      <button id="btn-hell-revive" class="btn-primary">看广告 +15 秒续命（每局 1 次）</button>
+      <button id="btn-hell-finish" class="btn-ghost">直接结算</button>
+    </div>
+    <button class="btn-ghost" data-quit>放弃本局</button>
+  </section>
+
+  <!-- 维度切换过渡 -->
+  <section id="screen-inter" class="screen">
+    <div class="inter-wrap">
+      <div class="inter-next">下一项</div>
+      <div class="inter-dim" id="inter-dim">🎯 狙击</div>
+      <p class="inter-rule" id="inter-rule"></p>
+      <div class="inter-count" id="inter-count">3</div>
+      <button id="btn-inter-skip" class="btn-ghost">立刻开始</button>
+      <button class="btn-ghost" data-quit>放弃本局</button>
+    </div>
+  </section>
+
+  <!-- 天梯结算 -->
+  <section id="screen-result" class="screen">
+    <h2 class="result-title">四维成绩卡</h2>
+    <div class="result-combo"><span id="combo-score">0</span><small>本局综合分（闪击30% · 止步30% · 抉择20% · 狙击20%，起点权重）</small></div>
+    <div class="rank-line" id="rank-line"></div>
+    <div class="radar-wrap"><svg id="radar" viewBox="0 0 220 220" width="220" height="220" aria-label="四维雷达图"></svg></div>
+    <div class="result-cards" id="result-cards"></div>
+    <p class="diagnosis" id="res-diagnosis"></p>
+    <p class="device-note" id="res-device"></p>
+    <div class="result-btns">
+      <button id="btn-train-weak" class="btn-primary">专练最弱项</button>
+      <button id="btn-poster" class="btn-ghost">生成分享海报</button>
+      <button id="btn-xp-ad" class="btn-ghost">看广告 · 本局 XP 双倍</button>
+      <button id="btn-again" class="btn-ghost">再来一局</button>
+      <button id="btn-home" class="btn-ghost">回主页</button>
+    </div>
+  </section>
+
+  <!-- 专练结算 -->
+  <section id="screen-practice" class="screen">
+    <h2 class="result-title" id="pr-title">专练结果</h2>
+    <div class="result-combo"><span id="pr-score">0</span><small id="pr-label">本维得分</small></div>
+    <div class="rcard"><div class="rcard-detail" id="pr-detail"></div></div>
+    <p class="diagnosis" id="pr-compare"></p>
+    <p class="device-note" id="pr-note">专练不计段位、不进天梯中位数，只用来补短板。</p>
+    <div class="result-btns">
+      <button id="btn-pr-again" class="btn-primary">再练一次</button>
+      <button id="btn-pr-ladder" class="btn-ghost">去打天梯局</button>
+      <button id="btn-pr-home" class="btn-ghost">回主页</button>
+    </div>
+  </section>
+
+  <!-- 模拟广告弹窗（Pages 版占位，虎扑版 M4 换真实广告桥） -->
+  <div id="ad-modal" class="overlay" hidden>
+    <div class="overlay-box">
+      <div class="ad-badge">广告</div>
+      <p class="ad-text">模拟广告播放中…<br><small>虎扑正式版将替换为平台激励广告，奖励规则不变</small></p>
+      <div class="ad-count" id="ad-count">3</div>
+    </div>
+  </div>
+
+  <!-- 海报层 -->
+  <div id="poster-overlay" class="overlay" hidden>
+    <div class="overlay-box poster-box">
+      <img id="poster-img" alt="反应天梯成绩海报">
+      <p class="poster-hint">长按图片保存，或点下方按钮下载，发给朋友挑战</p>
+      <div class="result-btns">
+        <a id="poster-download" class="btn-ghost" download="reflex-ladder-poster.png">下载海报</a>
+        <button id="btn-poster-post" class="btn-ghost" hidden>发到虎扑</button>
+        <button id="btn-poster-close" class="btn-ghost">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+</div>
+<script>
+'use strict';
+/* 《反应天梯》M2：四维（闪击/狙击/抉择/止步）+ 段位 + 短板专练
+   计分口径见 设计案v0.2.md。纯函数在前，便于 node 对账测试。 */
+
+var SAVE_KEY = 'reflex_ladder_save_v1';
+var FLASH_TRIALS = 7;          // M2 起正式 7 次取中位数
+var SNIPER_TARGETS = 10;
+var SNIPER_TIMEOUT = 1500;
+var CHOICE_TRIALS = 12;
+var CHOICE_TIMEOUT = 1500;
+var STOP_TRIALS = 14, STOP_GO = 9, STOP_WINDOW = 950;
+
+function median(arr) {
+  if (!arr.length) return 0;
+  var s = arr.slice().sort(function (a, b) { return a - b; });
+  var m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+function mean(arr) { return arr.length ? arr.reduce(function (a, b) { return a + b; }, 0) / arr.length : 0; }
+function stddev(arr) {
+  if (arr.length < 2) return 0;
+  var mu = mean(arr), v = 0;
+  arr.forEach(function (x) { v += (x - mu) * (x - mu); });
+  return Math.sqrt(v / arr.length);
+}
+function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+
+/* 触控延迟校正（主人 2026-11-01 拍板）：手机触控+显示链路实测总延迟 35-140ms（26 款机型机器人实测），
+   按帧率档取保守值统一扣减，结算页明示校正量、明细保留原始值——明着校正，不做无标注暗改。 */
+function latencyCorr(frameMs) {
+  if (frameMs && frameMs <= 9.5) return 25;   // 高刷档：显示链路短，扣得少
+  if (frameMs && frameMs >= 13.5) return 40;  // 标准档（60Hz）
+  return 32;                                   // 均衡档 / 未测出
+}
+function corrRT(raw, corr) { return Math.max(80, Math.round(raw - corr)); }
+
+/* ---------- M3 纯函数 ---------- */
+/* 确定性 RNG（每日挑战同种子）：mulberry32 */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function seedFromString(str) {
+  var h = 2166136261;
+  for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+/* XP 等级（只涨称号与外观，不碰成绩——设计案定版） */
+var XP_LEVELS = [[0, '新兵'], [100, '快手'], [250, '疾风手'], [500, '鹰眼'], [900, '狙击手'], [1500, '反应宗师'], [2500, '传说'], [4000, '封神者']];
+function levelOf(xp) {
+  var cur = { lv: 1, name: XP_LEVELS[0][1], at: 0 }, next = null;
+  for (var i = 0; i < XP_LEVELS.length; i++) {
+    if (xp >= XP_LEVELS[i][0]) {
+      cur = { lv: i + 1, name: XP_LEVELS[i][1], at: XP_LEVELS[i][0] };
+      next = XP_LEVELS[i + 1] ? { name: XP_LEVELS[i + 1][1], at: XP_LEVELS[i + 1][0] } : null;
+    }
+  }
+  return { lv: cur.lv, name: cur.name, at: cur.at, next: next };
+}
+/* 地狱单题得分：基础 100 + 速度奖最高 100（900ms 内线性） */
+function hellPoints(rt) { return 100 + Math.round(100 * clamp01((900 - rt) / 900)); }
+/* 每日挑战合成：闪击/狙击各半 */
+function dailyScoreOf(flash, sniper) { return Math.round(0.5 * flash + 0.5 * sniper); }
+/* 排行榜分榜口径：按本局实际校正档归榜（−40 标准榜 / 其余高刷榜），与后端 boardRule 对齐 */
+function boardForCorr(corr) { return corr >= 40 ? 'combo_std' : 'combo_high'; }
+var BOARD_NAMES = { combo_std: '综合 · 标准档', combo_high: '综合 · 高刷档', hell: '地狱 60 秒' };
+/* 成就表 */
+var ACH_DEFS = [
+  ['first_ladder', '初入天梯', '完成第一局天梯局'],
+  ['flash250', '快如闪电', '闪击中位数 < 250ms'],
+  ['flash200', '两百俱乐部', '闪击中位数 < 200ms'],
+  ['stable', '稳如老狗', '闪击稳定性 CV < 0.08'],
+  ['sniper900', '神枪手', '狙击单维 ≥ 900 分'],
+  ['combo800', '八百壮士', '天梯综合 ≥ 800 分'],
+  ['diamond', '钻石段位', '段位达到钻石及以上'],
+  ['hell1500', '地狱行者', '地狱 60 秒 ≥ 4000 分'],
+  ['hell2500', '地狱征服者', '地狱 60 秒 ≥ 7000 分'],
+  ['daily1', '每日一练', '完成一次每日挑战'],
+  ['daily3', '三日打卡', '累计 3 天完成每日挑战'],
+  ['ghostwin', '超越自己', '幽灵竞速赢过自己的最佳幽灵'],
+  ['plays10', '天梯常客', '累计完成 10 局天梯局']
+];
+
+/* 闪击汇总：CV>0.25 剔除最快一试再取中位数 */
+function summarizeFlash(rts) {
+  var used = rts.slice(), dropped = null, cv = 0;
+  if (rts.length >= 3) {
+    cv = mean(rts) ? stddev(rts) / mean(rts) : 0;
+    if (cv > 0.25) { dropped = Math.min.apply(null, used); used.splice(used.indexOf(dropped), 1); }
+  }
+  return { median: Math.round(median(used)), used: used, dropped: dropped, cv: cv };
+}
+var FLASH_ANCHORS = [[140, 1000], [180, 880], [213, 760], [250, 620], [300, 420], [350, 250], [450, 80], [600, 30]];
+function flashScoreFromMs(ms) {
+  if (ms <= FLASH_ANCHORS[0][0]) return 1000;
+  for (var i = 1; i < FLASH_ANCHORS.length; i++) {
+    if (ms <= FLASH_ANCHORS[i][0]) {
+      var a = FLASH_ANCHORS[i - 1], b = FLASH_ANCHORS[i];
+      return Math.round(a[1] + (b[1] - a[1]) * (ms - a[0]) / (b[0] - a[0]));
+    }
+  }
+  return 30;
+}
+/* 通用「正确率 × 速度」复合分：acc 0-1，medRt 在 fast..slow 间线性 */
+function accSpeedScore(acc, medRt, fastMs, slowMs) {
+  if (!acc) return 0;
+  var sn = clamp01((slowMs - medRt) / (slowMs - fastMs));
+  return Math.round(1000 * acc * (0.55 + 0.45 * sn));
+}
+/* 狙击复合分（M1 口径不变） */
+function sniperComposite(hits, total, hitRts) {
+  if (!total || !hits) return { score: 0, hitRate: 0, medianRt: 0, speedNorm: 0 };
+  var hitRate = hits / total, medRt = median(hitRts);
+  var speedNorm = clamp01((1100 - medRt) / 800);
+  return { score: Math.round(1000 * hitRate * (0.55 + 0.45 * speedNorm)), hitRate: hitRate, medianRt: Math.round(medRt), speedNorm: speedNorm };
+}
+function sniperTargetPoints(rt, distRatio) {
+  var speed = clamp01((1100 - rt) / 950);
+  return Math.round(1000 * (0.6 * speed + 0.4 * (1 - distRatio)));
+}
+/* 抉择分：正确率 × 速度（选择反应锚点 350-1300ms） */
+function choiceScore(correct, total, correctRts) {
+  if (!total) return { score: 0, acc: 0, medianRt: 0 };
+  var acc = correct / total, medRt = correctRts.length ? median(correctRts) : 1300;
+  return { score: accSpeedScore(acc, medRt, 350, 1300), acc: acc, medianRt: Math.round(medRt) };
+}
+/* 止步分：GO 表现 50% + 抑制表现 50% */
+function stopScore(goHits, goTotal, goRts, falseAlarms, nogoTotal) {
+  var goAcc = goTotal ? goHits / goTotal : 0;
+  var goMed = goRts.length ? median(goRts) : 1000;
+  var goPart = accSpeedScore(goAcc, goMed, 250, 1000) / 1000;
+  var inhibit = nogoTotal ? 1 - falseAlarms / nogoTotal : 1;
+  return { score: Math.round(1000 * (0.5 * goPart + 0.5 * inhibit)), goAcc: goAcc, goMedianRt: Math.round(goMed), inhibit: inhibit };
+}
+/* 四维综合（起点权重，未冻结） */
+var WEIGHTS = { flash: 0.30, stop: 0.30, choice: 0.20, sniper: 0.20 };
+function compositeScore(d) {
+  return Math.round(d.flash * WEIGHTS.flash + d.stop * WEIGHTS.stop + d.choice * WEIGHTS.choice + d.sniper * WEIGHTS.sniper);
+}
+/* 段位表：[下限, 名称]，由高到低 */
+var RANKS = [[930, '封神'], [860, '王者'], [790, '大师'], [710, '钻石'], [620, '铂金'], [500, '黄金'], [350, '白银'], [0, '青铜']];
+function rankOf(score) {
+  for (var i = 0; i < RANKS.length; i++) {
+    if (score >= RANKS[i][0]) {
+      var next = i > 0 ? { name: RANKS[i - 1][1], need: RANKS[i - 1][0] - score } : null;
+      return { name: RANKS[i][1], next: next };
+    }
+  }
+  return { name: '青铜', next: { name: '白银', need: 350 - score } };
+}
+function rankMedian(history) { return Math.round(median(history.slice(-5))); }
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { median: median, mean: mean, stddev: stddev, summarizeFlash: summarizeFlash, flashScoreFromMs: flashScoreFromMs, sniperComposite: sniperComposite, sniperTargetPoints: sniperTargetPoints, accSpeedScore: accSpeedScore, choiceScore: choiceScore, stopScore: stopScore, compositeScore: compositeScore, rankOf: rankOf, rankMedian: rankMedian, WEIGHTS: WEIGHTS, latencyCorr: latencyCorr, corrRT: corrRT, mulberry32: mulberry32, seedFromString: seedFromString, levelOf: levelOf, hellPoints: hellPoints, dailyScoreOf: dailyScoreOf, XP_LEVELS: XP_LEVELS, ACH_DEFS: ACH_DEFS, boardForCorr: boardForCorr, BOARD_NAMES: BOARD_NAMES };
+}
+
+/* ================= 游戏逻辑（浏览器） ================= */
+if (typeof document !== 'undefined') (function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var NAMES = { flash: '⚡ 闪击', sniper: '🎯 狙击', choice: '🔀 抉择', stop: '🛑 止步' };
+  var ADVICE = {
+    flash: '纯反应是你的短板：专练闪击，先把中位数压进 250ms 以内，稳定性比爆种更重要。',
+    sniper: '定位是你的短板：狙击输在找靶和空点，先求点中、再求点快。',
+    choice: '抉择是你的短板：你输在认指令不输在手，专练时盯紧指令切换那一下。',
+    stop: '止步是你的短板：你太容易手贱抢点，专练止步把假动作忍过去。'
+  };
+  var screens = {};
+  ['home', 'flash', 'sniper', 'choice', 'stop', 'inter', 'hell', 'leaderboard', 'result', 'practice'].forEach(function (n) { screens[n] = $('screen-' + n); });
+  function show(name) {
+    Object.keys(screens).forEach(function (k) { screens[k].classList.toggle('active', k === name); });
+    window.scrollTo(0, 0);
+  }
+  var AC = null;
+  function beep(freq, dur, type) {
+    try {
+      if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+      var o = AC.createOscillator(), g = AC.createGain();
+      o.type = type || 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.12, AC.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+      o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime + dur);
+    } catch (e) {}
+  }
+  function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+  function loadSave() { try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; } catch (e) { return {}; } }
+  function storeSave(s) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) {} }
+
+  /* 设备档检测 */
+  var device = { bucket: '检测中', frameMs: 0, input: '触屏', corr: latencyCorr(0) };
+  (function detectDevice() {
+    var stamps = [], last = 0, frames = 0;
+    function tick(t) {
+      if (last) stamps.push(t - last);
+      last = t; frames++;
+      if (frames < 70) requestAnimationFrame(tick);
+      else {
+        var fm = median(stamps.slice(5));
+        device.frameMs = Math.round(fm * 10) / 10;
+        device.bucket = fm <= 9.5 ? '高刷档' : (fm >= 13.5 ? '标准档' : '均衡档（阈值待定）');
+        device.corr = latencyCorr(fm);
+        renderHome();
+      }
+    }
+    requestAnimationFrame(tick);
+  })();
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function renderHome() {
+    $('device-line').textContent = '设备档：' + device.input + ' · ' + device.bucket + '（帧间隔约 ' + device.frameMs + 'ms）· 触控延迟校正 −' + device.corr + 'ms';
+    var s = loadSave(), best = [];
+    if (s.bestFlashMs) best.push('闪击最佳 ' + s.bestFlashMs + 'ms');
+    if (s.bestSniperScore) best.push('狙击最佳 ' + s.bestSniperScore + ' 分');
+    if (s.bestCombo) best.push('综合最佳 ' + s.bestCombo + ' 分');
+    if (s.hellBest) best.push('地狱最佳 ' + s.hellBest + ' 分');
+    $('home-best').textContent = best.length ? ('🏆 ' + best.join('　·　') + (s.plays ? '　·　共 ' + s.plays + ' 局' : '')) : '暂无纪录，来打出你的第一局';
+    var lv = levelOf(s.xp || 0);
+    $('xp-line').textContent = '🎖 ' + lv.name + ' · Lv.' + lv.lv + ' · XP ' + (s.xp || 0) + (lv.next ? '（距' + lv.next.name + '还差 ' + (lv.next.at - (s.xp || 0)) + ' XP）' : '（已满级）');
+    if (s.daily && s.daily.date === todayKey()) {
+      $('daily-line').textContent = '📅 今日挑战已完成：' + s.daily.score + ' 分 · 累计打卡 ' + (s.dailyDays || 0) + ' 天（再点为看广告练习局，不覆盖成绩）';
+    } else {
+      $('daily-line').textContent = '📅 今日挑战未打：全员同题（闪击 5 次 + 狙击 6 靶），首局成绩计入打卡';
+    }
+    /* 成就墙用 DOM 构建（不用 innerHTML，过平台 DOM 注入检测口径） */
+    var achGrid = $('ach-grid');
+    achGrid.textContent = '';
+    ACH_DEFS.forEach(function (a) {
+      var on = s.ach && s.ach[a[0]];
+      var item = document.createElement('div');
+      item.className = 'ach-item' + (on ? ' on' : '');
+      var b = document.createElement('b');
+      b.textContent = (on ? '🏅 ' : '🔒 ') + a[1];
+      item.appendChild(b);
+      item.appendChild(document.createTextNode(a[2]));
+      achGrid.appendChild(item);
+    });
+    if (s.history && s.history.length) {
+      var med = rankMedian(s.history), r = rankOf(med);
+      $('home-rank').innerHTML = '当前段位 <b>' + r.name + '</b>（近 ' + Math.min(5, s.history.length) + ' 局中位 ' + med + ' 分' + (r.next ? '，距' + r.next.name + '还差 ' + r.next.need + ' 分' : '，已登顶') + '）';
+    } else $('home-rank').textContent = '暂无段位 · 打一局天梯局定段';
+  }
+  function deviceNote() {
+    return '本局口径：' + device.input + ' · ' + device.bucket + '（帧间隔约 ' + device.frameMs + 'ms），已扣触控延迟校正 −' + device.corr + 'ms（手机链路实测总延迟 35-140ms，取保守值；原始测得值见闪击明细注记）。同设备对比，换设备不可直接比。';
+  }
+  function pop(el, txt, color) {
+    el.textContent = txt; el.style.color = color || '';
+    el.classList.add('show');
+    setTimeout(function () { el.classList.remove('show'); }, 600);
+  }
+
+  /* 会话 */
+  var session = null; // {mode, dim, results:{}, trials:{flash,sniper}}
+  var timers = [];
+  var RNG = Math.random; // 每日挑战时换成种子 RNG，实现全员同题
+  function rnd() { return RNG(); }
+  var lastResult = null; // 最近一局天梯成绩（海报/XP 双倍广告用）
+  var H = null;          // 地狱局状态
+  function later(fn, ms) { var id = setTimeout(fn, ms); timers.push(id); return id; }
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+  function quitToHome() {
+    clearTimers(); session = null; H = null; RNG = Math.random;
+    $('ghost-bar').hidden = true;
+    var rv = $('hell-revive'); if (rv) rv.hidden = true;
+    renderHome(); show('home');
+  }
+  function flashTrials() { return (session && session.trials && session.trials.flash) || FLASH_TRIALS; }
+  function sniperTotal() { return (session && session.trials && session.trials.sniper) || SNIPER_TARGETS; }
+
+  /* ---------- XP / 成就 / 广告（M3） ---------- */
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+  function unlock(id) {
+    var s = loadSave();
+    s.ach = s.ach || {};
+    if (s.ach[id]) return false;
+    s.ach[id] = 1; storeSave(s);
+    var def = null;
+    ACH_DEFS.forEach(function (a) { if (a[0] === id) def = a; });
+    if (def) toast('🏅 成就解锁：' + def[1]);
+    return true;
+  }
+  function addXP(n) {
+    var s = loadSave();
+    var before = levelOf(s.xp || 0);
+    s.xp = (s.xp || 0) + n; storeSave(s);
+    var after = levelOf(s.xp);
+    if (after.lv > before.lv) toast('🎖 称号晋升：' + after.name + '（Lv.' + after.lv + '）');
+    return n;
+  }
+  function checkFlashAch(result) {
+    if (!result) return;
+    if (result.medianMs && result.medianMs < 250) unlock('flash250');
+    if (result.medianMs && result.medianMs < 200) unlock('flash200');
+    if (result.cv !== undefined && result.cv > 0 && result.cv < 0.08) unlock('stable');
+  }
+  function maybeSaveGhost(score, marks) {
+    if (!marks || !marks.length) return;
+    var s = loadSave();
+    if (!s.ghost || score > s.ghost.score) { s.ghost = { score: score, marks: marks.slice() }; storeSave(s); }
+  }
+  /* 广告层：Pages 版为模拟广告；虎扑版 M4 注入 window.RL_PLATFORM_ADS 换真实桥，奖励规则不变 */
+  var Ads = {
+    show: function (slot, cb) {
+      if (window.RL_PLATFORM_ADS && typeof window.RL_PLATFORM_ADS.show === 'function') { window.RL_PLATFORM_ADS.show(slot, cb); return; }
+      var modal = $('ad-modal'), count = $('ad-count'), n = 3;
+      modal.hidden = false; count.textContent = n;
+      var iv = setInterval(function () {
+        n--;
+        if (n <= 0) { clearInterval(iv); modal.hidden = true; cb(true); }
+        else count.textContent = n;
+      }, 800);
+    }
+  };
+
+  function startLadder() {
+    session = { mode: 'ladder', results: {} };
+    startFlash();
+  }
+  function startPractice(dim) {
+    session = { mode: 'practice', dim: dim, results: {} };
+    ({ flash: startFlash, sniper: startSniper, choice: startChoice, stop: startStop })[dim]();
+  }
+  function startDim(dim) {
+    ({ flash: startFlash, sniper: startSniper, choice: startChoice, stop: startStop })[dim]();
+  }
+  var INTER_RULES = {
+    sniper: '靶子会在随机位置闪现，点中它！越快越准分越高，共 10 个靶，点空计 0 分。',
+    choice: '看清顶部指令，只点指定颜色的靶，共 12 题。注意：指令会中途切换！',
+    stop: '绿圈出现立刻点，红圈带 ✕ 绝对不要点，共 14 题。忍住也是分。'
+  };
+  /* 维度切换过渡：预告下一项 + 规则一句 + 3 秒倒计时（可跳过）——主人真机反馈：新手反应不过来 */
+  function intermission(next) {
+    show('inter');
+    $('inter-dim').textContent = NAMES[next];
+    $('inter-rule').textContent = INTER_RULES[next] || '';
+    var n = 3;
+    $('inter-count').textContent = n;
+    beep(520, 0.09);
+    function step() {
+      n--;
+      if (n <= 0) { startDim(next); return; }
+      $('inter-count').textContent = n;
+      beep(520, 0.09);
+      later(step, 750);
+    }
+    later(step, 750);
+    $('btn-inter-skip').onclick = function () { clearTimers(); startDim(next); };
+  }
+  function dimDone(dim, result) {
+    session.results[dim] = result;
+    if (session.mode === 'practice') { finishPractice(dim, result); return; }
+    if (session.mode === 'ghost') { finishGhost(result); return; }
+    var order = (session.mode === 'daily' || session.mode === 'dailyPractice') ? ['flash', 'sniper'] : ['flash', 'sniper', 'choice', 'stop'];
+    var next = order[order.indexOf(dim) + 1];
+    if (next) intermission(next);
+    else if (order.length === 2) finishDaily();
+    else finishLadder();
+  }
+
+  /* ---------- 闪击 ---------- */
+  var F = null;
+  function startFlash() {
+    show('flash');
+    F = { rts: [], rawRts: [], fouls: 0, state: 'idle', goTime: 0 };
+    var arena = $('flash-arena');
+    arena.className = 'arena flash-idle';
+    $('flash-text').textContent = '点击开始';
+    $('flash-sub').textContent = '变绿后立刻点任意位置，抢跑作废';
+    $('flash-progress').textContent = '闪击 0/' + flashTrials();
+    $('flash-fouls').textContent = '';
+  }
+  function flashArm() {
+    F.state = 'wait';
+    var arena = $('flash-arena');
+    arena.className = 'arena flash-wait';
+    $('flash-text').textContent = '等待变绿…';
+    $('flash-sub').textContent = '变绿后立刻点任意位置，抢跑本轮作废';
+    $('flash-progress').textContent = '闪击 ' + F.rts.length + '/' + flashTrials();
+    later(function () {
+      requestAnimationFrame(function () {
+        if (!F || F.state !== 'wait') return;
+        arena.className = 'arena flash-go';
+        $('flash-text').textContent = '点！';
+        $('flash-sub').textContent = '';
+        F.goTime = performance.now();
+        F.state = 'go';
+      });
+    }, 1200 + rnd() * 3300);
+  }
+  $('flash-arena').addEventListener('pointerdown', function (e) {
+    if (!F || !session) return;
+    device.input = e.pointerType === 'mouse' ? '鼠标' : '触屏';
+    if (F.state === 'idle') { flashArm(); return; }
+    if (F.state === 'wait') {
+      clearTimers();
+      F.fouls++; beep(150, 0.25, 'sawtooth'); buzz(80);
+      pop($('flash-last'), '抢跑！', '#ef4444');
+      $('flash-fouls').textContent = '抢跑 ' + F.fouls + ' 次';
+      $('flash-text').textContent = '太早了，本轮作废';
+      $('flash-sub').textContent = '等变绿再点';
+      F.state = 'settle';
+      later(flashArm, 900);
+      return;
+    }
+    if (F.state === 'go') {
+      var rt = performance.now() - F.goTime;
+      F.state = 'settle';
+      if (rt < 100) {
+        beep(150, 0.25, 'sawtooth');
+        pop($('flash-last'), '疑似预判', '#ef4444');
+        $('flash-text').textContent = Math.round(rt) + 'ms 快得不真实，本轮不算';
+        $('flash-sub').textContent = '低于 100ms 视为预判，重来这一轮';
+        later(flashArm, 1000);
+        return;
+      }
+      var crt = corrRT(rt, device.corr);
+      F.rts.push(crt);
+      F.rawRts.push(rt);
+      beep(crt < 200 ? 980 : 660, 0.12); buzz(25);
+      pop($('flash-last'), crt + 'ms!', crt < 200 ? '#22ff9a' : '');
+      $('flash-progress').textContent = '闪击 ' + F.rts.length + '/' + flashTrials();
+      if (F.rts.length >= flashTrials()) {
+        var sum = summarizeFlash(F.rts);
+        later(function () {
+          dimDone('flash', {
+            score: flashScoreFromMs(sum.median), medianMs: sum.median, cv: sum.cv,
+            detail: '各次：' + sum.used.map(function (x) { return Math.round(x); }).join(' / ') + 'ms' +
+              (sum.dropped !== null ? '；波动过大（CV ' + sum.cv.toFixed(2) + '），已剔除最快一试 ' + Math.round(sum.dropped) + 'ms' : '；稳定性 CV ' + sum.cv.toFixed(2)) +
+              (F.fouls ? '；抢跑 ' + F.fouls + ' 次' : '') +
+              '；已扣延迟校正 −' + device.corr + 'ms（原始中位 ' + Math.round(median(F.rawRts)) + 'ms）'
+          });
+        }, 650);
+      } else later(flashArm, 650);
+    }
+  });
+
+  /* ---------- 狙击 ---------- */
+  var S = null;
+  function startSniper() {
+    show('sniper');
+    S = { idx: 0, hits: 0, misses: 0, timeouts: 0, hitRts: [], state: 'gap', goTime: 0, cx: 0, cy: 0, r: 0, runStart: performance.now(), marks: [] };
+    $('ghost-bar').hidden = !(session && session.mode === 'ghost');
+    sniperNext();
+  }
+  function sniperNext() {
+    if (!S) return;
+    if (S.idx >= sniperTotal()) {
+      var total = sniperTotal();
+      var sn = sniperComposite(S.hits, total, S.hitRts);
+      dimDone('sniper', {
+        score: sn.score, marks: S.marks.slice(),
+        detail: '命中 ' + S.hits + '/' + total + '（命中率 ' + Math.round(sn.hitRate * 100) + '%）' +
+          (S.hits ? '；命中中位 ' + sn.medianRt + 'ms' : '') + '；空点 ' + S.misses + ' 次；超时 ' + S.timeouts + ' 次'
+      });
+      return;
+    }
+    S.state = 'gap';
+    $('sniper-target').hidden = true;
+    $('sniper-progress').textContent = '狙击 ' + S.idx + '/' + sniperTotal();
+    $('sniper-hits').textContent = '命中 ' + S.hits + ' · 空点 ' + S.misses;
+    $('sniper-tip').textContent = '第 ' + (S.idx + 1) + ' 个靶…';
+    later(sniperSpawn, 400 + rnd() * 700);
+  }
+  function sniperSpawn() {
+    if (!S) return;
+    var arena = $('sniper-arena'), t = $('sniper-target');
+    var size = Math.round(76 - (76 - 44) * (S.idx / Math.max(1, sniperTotal() - 1)));
+    var aw = arena.clientWidth, ah = arena.clientHeight;
+    var x = 8 + rnd() * Math.max(10, aw - size - 16);
+    var y = 40 + rnd() * Math.max(10, ah - size - 56);
+    t.style.width = size + 'px'; t.style.height = size + 'px';
+    t.style.left = x + 'px'; t.style.top = y + 'px';
+    S.cx = x + size / 2; S.cy = y + size / 2; S.r = size / 2;
+    requestAnimationFrame(function () {
+      if (!S || S.state !== 'gap') return;
+      t.hidden = false;
+      S.goTime = performance.now();
+      S.state = 'live';
+      later(function () {
+        if (!S || S.state !== 'live') return;
+        S.state = 'gap'; S.timeouts++;
+        S.marks.push(performance.now() - S.runStart);
+        S.idx++;
+        pop($('sniper-pop'), '超时 0', '#ef4444');
+        ghostUpdate();
+        sniperNext();
+      }, SNIPER_TIMEOUT);
+    });
+  }
+  $('sniper-arena').addEventListener('pointerdown', function (e) {
+    if (!S || !session || S.state !== 'live') return;
+    device.input = e.pointerType === 'mouse' ? '鼠标' : '触屏';
+    var rect = $('sniper-arena').getBoundingClientRect();
+    var dist = Math.hypot(e.clientX - rect.left - S.cx, e.clientY - rect.top - S.cy);
+    S.state = 'gap';
+    $('sniper-target').hidden = true;
+    clearTimers();
+    S.marks.push(performance.now() - S.runStart);
+    if (dist <= S.r) {
+      var rt = corrRT(performance.now() - S.goTime, device.corr);
+      S.hits++; S.hitRts.push(rt);
+      beep(920, 0.1); buzz(20);
+      pop($('sniper-pop'), Math.round(rt) + 'ms +' + sniperTargetPoints(rt, dist / S.r), '#22ff9a');
+    } else {
+      S.misses++;
+      beep(180, 0.18, 'sawtooth'); buzz(60);
+      pop($('sniper-pop'), '空点 0', '#ef4444');
+    }
+    S.idx++;
+    ghostUpdate();
+    later(sniperNext, 260);
+  });
+
+  /* ---------- 抉择 ---------- */
+  var C = null;
+  function startChoice() {
+    show('choice');
+    C = { idx: 0, correct: 0, wrong: 0, timeouts: 0, correctRts: [], target: Math.random() < 0.5 ? 'red' : 'blue', state: 'gap', goTime: 0, spots: [] };
+    choiceNext();
+  }
+  function choiceInstr() {
+    var isRed = C.target === 'red';
+    $('choice-instr-color').textContent = isRed ? '🔴 红色' : '🔵 蓝色';
+    $('choice-instr-color').style.color = isRed ? '#ef4444' : '#3b82f6';
+  }
+  function choiceNext() {
+    if (!C) return;
+    if (C.idx >= CHOICE_TRIALS) {
+      var cs = choiceScore(C.correct, CHOICE_TRIALS, C.correctRts);
+      dimDone('choice', {
+        score: cs.score,
+        detail: '答对 ' + C.correct + '/' + CHOICE_TRIALS + '（正确率 ' + Math.round(cs.acc * 100) + '%）' +
+          (C.correct ? '；答对中位 ' + cs.medianRt + 'ms' : '') + '；打错 ' + C.wrong + ' 次；超时 ' + C.timeouts + ' 次'
+      });
+      return;
+    }
+    C.state = 'gap';
+    $('choice-a').hidden = true; $('choice-b').hidden = true;
+    if (C.idx > 0 && Math.random() < 0.4) C.target = C.target === 'red' ? 'blue' : 'red';
+    choiceInstr();
+    $('choice-progress').textContent = '抉择 ' + C.idx + '/' + CHOICE_TRIALS;
+    $('choice-right').textContent = '答对 ' + C.correct + ' · 错 ' + C.wrong;
+    $('choice-tip').textContent = '第 ' + (C.idx + 1) + ' 题，看指令…';
+    var instr = $('choice-instr');
+    instr.classList.add('flash');
+    later(function () { instr.classList.remove('flash'); choiceSpawn(); }, 550);
+  }
+  function choiceSpawn() {
+    if (!C) return;
+    var arena = $('choice-arena'), aw = arena.clientWidth, ah = arena.clientHeight, size = 84;
+    var lx = 14 + Math.random() * Math.max(10, aw / 2 - size - 20);
+    var rx = aw / 2 + 6 + Math.random() * Math.max(10, aw / 2 - size - 20);
+    var y1 = 50 + Math.random() * Math.max(10, ah - size - 70);
+    var y2 = 50 + Math.random() * Math.max(10, ah - size - 70);
+    var targetOnA = Math.random() < 0.5;
+    var other = C.target === 'red' ? 'blue' : 'red';
+    var a = $('choice-a'), b = $('choice-b');
+    a.className = 'ctarget ' + (targetOnA ? C.target : other);
+    b.className = 'ctarget ' + (targetOnA ? other : C.target);
+    a.style.left = lx + 'px'; a.style.top = y1 + 'px';
+    b.style.left = rx + 'px'; b.style.top = y2 + 'px';
+    C.spots = [
+      { color: targetOnA ? C.target : other, cx: lx + size / 2, cy: y1 + size / 2, r: size / 2 },
+      { color: targetOnA ? other : C.target, cx: rx + size / 2, cy: y2 + size / 2, r: size / 2 }
+    ];
+    requestAnimationFrame(function () {
+      if (!C || C.state !== 'gap') return;
+      a.hidden = false; b.hidden = false;
+      C.goTime = performance.now();
+      C.state = 'live';
+      $('choice-tip').textContent = '';
+      later(function () {
+        if (!C || C.state !== 'live') return;
+        C.state = 'gap'; C.timeouts++;
+        pop($('choice-pop'), '超时', '#ef4444');
+        C.idx++; choiceNext();
+      }, CHOICE_TIMEOUT);
+    });
+  }
+  $('choice-arena').addEventListener('pointerdown', function (e) {
+    if (!C || !session || C.state !== 'live') return;
+    device.input = e.pointerType === 'mouse' ? '鼠标' : '触屏';
+    var rect = $('choice-arena').getBoundingClientRect();
+    var px = e.clientX - rect.left, py = e.clientY - rect.top, hit = null;
+    C.spots.forEach(function (sp) { if (Math.hypot(px - sp.cx, py - sp.cy) <= sp.r) hit = sp; });
+    C.state = 'gap';
+    $('choice-a').hidden = true; $('choice-b').hidden = true;
+    clearTimers();
+    if (hit && hit.color === C.target) {
+      var rt = corrRT(performance.now() - C.goTime, device.corr);
+      C.correct++; C.correctRts.push(rt);
+      beep(920, 0.1); buzz(20);
+      pop($('choice-pop'), Math.round(rt) + 'ms ✓', '#22ff9a');
+    } else {
+      C.wrong++;
+      beep(180, 0.18, 'sawtooth'); buzz(60);
+      pop($('choice-pop'), hit ? '打错了！' : '没点中', '#ef4444');
+    }
+    C.idx++;
+    later(choiceNext, 300);
+  });
+
+  /* ---------- 止步 ---------- */
+  var T = null;
+  function startStop() {
+    show('stop');
+    var seq = [];
+    for (var i = 0; i < STOP_GO; i++) seq.push('go');
+    for (var j = 0; j < STOP_TRIALS - STOP_GO; j++) seq.push('nogo');
+    for (var k = seq.length - 1; k > 0; k--) { var r = Math.floor(Math.random() * (k + 1)); var tmp = seq[k]; seq[k] = seq[r]; seq[r] = tmp; }
+    T = { idx: 0, seq: seq, goHits: 0, goMiss: 0, goRts: [], falseAlarms: 0, inhibits: 0, state: 'gap', goTime: 0 };
+    stopNext();
+  }
+  function stopNext() {
+    if (!T) return;
+    if (T.idx >= STOP_TRIALS) {
+      var ss = stopScore(T.goHits, STOP_GO, T.goRts, T.falseAlarms, STOP_TRIALS - STOP_GO);
+      dimDone('stop', {
+        score: ss.score,
+        detail: '该点时命中 ' + T.goHits + '/' + STOP_GO + '（漏点 ' + T.goMiss + '）' +
+          (T.goRts.length ? '；命中中位 ' + ss.goMedianRt + 'ms' : '') +
+          '；假靶忍住 ' + T.inhibits + '/' + (STOP_TRIALS - STOP_GO) + '（误点 ' + T.falseAlarms + ' 次）'
+      });
+      return;
+    }
+    T.state = 'gap';
+    $('stop-stim').hidden = true;
+    $('stop-progress').textContent = '止步 ' + T.idx + '/' + STOP_TRIALS;
+    $('stop-right').textContent = '忍住 ' + T.inhibits + ' · 误点 ' + T.falseAlarms;
+    $('stop-text').textContent = '第 ' + (T.idx + 1) + ' 题';
+    later(stopSpawn, 420 + Math.random() * 300);
+  }
+  function stopSpawn() {
+    if (!T) return;
+    var stim = $('stop-stim'), kind = T.seq[T.idx];
+    stim.className = 'stim ' + kind;
+    stim.textContent = kind === 'nogo' ? '✕' : '';
+    requestAnimationFrame(function () {
+      if (!T || T.state !== 'gap') return;
+      stim.hidden = false;
+      T.goTime = performance.now();
+      T.state = 'live';
+      $('stop-text').textContent = '';
+      later(function () {
+        if (!T || T.state !== 'live') return;
+        T.state = 'gap';
+        stim.hidden = true;
+        if (kind === 'go') { T.goMiss++; pop($('stop-pop'), '漏了！', '#ef4444'); beep(180, 0.15, 'sawtooth'); }
+        else { T.inhibits++; pop($('stop-pop'), '忍住了 ✓', '#22ff9a'); beep(760, 0.08); }
+        T.idx++; stopNext();
+      }, STOP_WINDOW);
+    });
+  }
+  $('stop-arena').addEventListener('pointerdown', function (e) {
+    if (!T || !session || T.state !== 'live') return;
+    device.input = e.pointerType === 'mouse' ? '鼠标' : '触屏';
+    var kind = T.seq[T.idx];
+    T.state = 'gap';
+    $('stop-stim').hidden = true;
+    clearTimers();
+    if (kind === 'go') {
+      var rt = corrRT(performance.now() - T.goTime, device.corr);
+      T.goHits++; T.goRts.push(rt);
+      beep(920, 0.1); buzz(20);
+      pop($('stop-pop'), Math.round(rt) + 'ms ✓', '#22ff9a');
+    } else {
+      T.falseAlarms++;
+      beep(150, 0.22, 'sawtooth'); buzz(90);
+      pop($('stop-pop'), '手贱了！', '#ef4444');
+    }
+    T.idx++;
+    later(stopNext, 300);
+  });
+
+  /* ---------- 每日挑战（同种子，首局正式） ---------- */
+  function startDaily(official) {
+    RNG = mulberry32(seedFromString('reflex-daily-' + todayKey()));
+    session = { mode: official ? 'daily' : 'dailyPractice', results: {}, trials: { flash: 5, sniper: 6 } };
+    startFlash();
+  }
+  function finishDaily() {
+    RNG = Math.random;
+    var dims = session.results;
+    var score = dailyScoreOf(dims.flash.score, dims.sniper.score);
+    var official = session.mode === 'daily';
+    var key = todayKey();
+    if (official) {
+      var s = loadSave();
+      if (!s.daily || s.daily.date !== key) s.dailyDays = (s.dailyDays || 0) + 1;
+      s.daily = { date: key, score: score };
+      storeSave(s);
+      addXP(20);
+      unlock('daily1');
+      if ((loadSave().dailyDays || 0) >= 3) unlock('daily3');
+      lbSubmit('daily_' + key, score, { flash: dims.flash.score, sniper: dims.sniper.score });
+    }
+    checkFlashAch(dims.flash);
+    $('pr-title').textContent = official ? '📅 每日挑战 · 今日成绩' : '📅 每日挑战 · 练习局';
+    $('pr-score').textContent = score;
+    $('pr-label').textContent = '每日合成（闪击 50% + 狙击 50%）';
+    $('pr-detail').textContent = '闪击 ' + dims.flash.score + ' 分（中位 ' + dims.flash.medianMs + 'ms）；狙击 ' + dims.sniper.score + ' 分。全员同题同种子（' + key + '），首局为正式成绩。';
+    $('pr-compare').textContent = official ? ('今日已打卡，累计 ' + (loadSave().dailyDays || 0) + ' 天，XP +20 已到账，明日换新题。') : '练习局不覆盖正式成绩，把今天这套题打熟就好。';
+    $('pr-note').textContent = '每日挑战与段位无关：首局成绩计入打卡，练习局不覆盖正式成绩。';
+    $('btn-pr-again').onclick = function () { startDaily(false); };
+    show('practice');
+  }
+
+  /* ---------- 幽灵竞速（和自己的最佳狙击比） ---------- */
+  function startGhost() {
+    var s = loadSave();
+    if (!s.ghost || !s.ghost.marks || !s.ghost.marks.length) { toast('暂无幽灵：先打一局天梯或专练狙击，生成你的最佳幽灵'); return; }
+    session = { mode: 'ghost', dim: 'sniper', results: {} };
+    startSniper();
+    ghostUpdate();
+  }
+  function ghostUpdate() {
+    if (!session || session.mode !== 'ghost' || !S) return;
+    var s = loadSave();
+    if (!s.ghost) return;
+    var elapsed = performance.now() - S.runStart, g = 0;
+    s.ghost.marks.forEach(function (t) { if (t <= elapsed) g++; });
+    var mine = S.idx, total = sniperTotal();
+    $('ghost-bar').textContent = '👻 幽灵（最佳 ' + s.ghost.score + ' 分）已打 ' + g + '/' + total + ' 靶 · 你 ' + mine + '/' + total + ' 靶 · ' + (mine > g ? '你领先，稳住！' : (mine < g ? '幽灵领先，追！' : '并驾齐驱'));
+  }
+  function finishGhost(result) {
+    $('ghost-bar').hidden = true;
+    var s = loadSave();
+    var ghost = s.ghost || { score: 0 };
+    var win = result.score > ghost.score;
+    maybeSaveGhost(result.score, result.marks); // 仅当分数更高才覆盖（maybeSaveGhost 内置判断）
+    if (win) { addXP(15); unlock('ghostwin'); }
+    $('pr-title').textContent = '👻 幽灵竞速 · 结果';
+    $('pr-score').textContent = result.score;
+    $('pr-label').textContent = win ? '你赢了自己的最佳幽灵！' : '幽灵以 ' + ghost.score + ' 分获胜';
+    $('pr-detail').textContent = result.detail;
+    $('pr-compare').textContent = win ? '新幽灵已更新为本局：未来的你，将挑战现在的你。' : '还差 ' + (ghost.score - result.score + 1) + ' 分翻盘，盯紧每个靶的出手节奏再来。';
+    $('pr-note').textContent = '幽灵竞速不计段位，赢了会更新你的幽灵。';
+    $('btn-pr-again').onclick = function () { startGhost(); };
+    show('practice');
+  }
+
+  /* ---------- 地狱 60 秒 ---------- */
+  function startHell() {
+    session = { mode: 'hell', results: {} };
+    show('hell');
+    H = { score: 0, correct: 0, faults: 0, left: 60, state: 'gap', type: null, goTime: 0, revived: false, over: false, paused: false, lastTick: performance.now(), cx: 0, cy: 0, r: 0 };
+    $('hell-revive').hidden = true;
+    $('hell-stim').hidden = true;
+    hellHUD();
+    later(hellTick, 100);
+    later(hellSpawn, 600);
+  }
+  function hellHUD() {
+    if (!H) return;
+    $('hell-score').textContent = '得分 ' + H.score;
+    $('hell-count').textContent = '答对 ' + H.correct + ' · 失误 ' + H.faults;
+    $('hell-time').textContent = H.left.toFixed(1);
+    $('hell-timefill').style.width = Math.max(0, H.left / 60 * 100) + '%';
+  }
+  function hellTick() {
+    if (!H || H.over) return;
+    var now = performance.now();
+    var dt = (now - H.lastTick) / 1000;
+    H.lastTick = now;
+    if (!H.paused) {
+      H.left -= dt;
+      if (H.left <= 0) { H.left = 0; hellHUD(); hellTimeUp(); return; }
+      hellHUD();
+    }
+    later(hellTick, 100);
+  }
+  function hellTimeUp() {
+    if (!H) return;
+    if (!H.revived) {
+      H.paused = true;
+      H.state = 'gap';
+      $('hell-stim').hidden = true;
+      $('hell-revive-state').textContent = '未使用';
+      $('hell-revive').hidden = false;
+    } else finishHell();
+  }
+  function hellSpawn() {
+    if (!H || H.over || H.paused) return;
+    var arena = $('hell-arena'), stim = $('hell-stim');
+    var roll = Math.random();
+    H.type = roll < 0.45 ? 'tap' : (roll < 0.8 ? 'target' : 'nogo');
+    var size = H.type === 'target' ? 74 : 150;
+    var aw = arena.clientWidth, ah = arena.clientHeight;
+    var x = 10 + Math.random() * Math.max(10, aw - size - 20);
+    var y = 44 + Math.random() * Math.max(10, ah - size - 60);
+    stim.style.width = size + 'px'; stim.style.height = size + 'px';
+    stim.style.left = x + 'px'; stim.style.top = y + 'px';
+    stim.style.fontSize = Math.round(size * 0.44) + 'px';
+    stim.className = H.type;
+    stim.textContent = H.type === 'nogo' ? '✕' : '';
+    H.cx = x + size / 2; H.cy = y + size / 2; H.r = size / 2;
+    requestAnimationFrame(function () {
+      if (!H || H.over || H.paused) return;
+      stim.hidden = false;
+      H.goTime = performance.now();
+      H.state = 'live';
+      later(function () {
+        if (!H || H.state !== 'live') return;
+        H.state = 'gap'; stim.hidden = true;
+        if (H.type === 'nogo') { H.correct++; H.score += 80; pop($('hell-pop'), '忍住 +80', '#22ff9a'); beep(760, 0.08); }
+        else { H.faults++; H.left = Math.max(0.01, H.left - 3); pop($('hell-pop'), '超时 −3s', '#ef4444'); beep(180, 0.15, 'sawtooth'); }
+        hellHUD();
+        later(hellSpawn, 240);
+      }, H.type === 'nogo' ? 850 : 1000);
+    });
+  }
+  $('hell-arena').addEventListener('pointerdown', function (e) {
+    if (!H || !session || H.state !== 'live' || H.paused || H.over) return;
+    device.input = e.pointerType === 'mouse' ? '鼠标' : '触屏';
+    var rect = $('hell-arena').getBoundingClientRect();
+    var dist = Math.hypot(e.clientX - rect.left - H.cx, e.clientY - rect.top - H.cy);
+    H.state = 'gap';
+    $('hell-stim').hidden = true;
+    clearTimers();
+    if (H.type === 'nogo') {
+      H.faults++; H.left = Math.max(0.01, H.left - 3);
+      pop($('hell-pop'), '手贱 −3s', '#ef4444'); beep(150, 0.22, 'sawtooth'); buzz(90);
+    } else if (dist <= H.r) {
+      var rt = corrRT(performance.now() - H.goTime, device.corr);
+      var pts = hellPoints(rt);
+      H.score += pts; H.correct++;
+      pop($('hell-pop'), '+' + pts, '#22ff9a'); beep(920, 0.1); buzz(20);
+    } else {
+      H.faults++; H.left = Math.max(0.01, H.left - 2);
+      pop($('hell-pop'), '空点 −2s', '#ef4444'); beep(180, 0.18, 'sawtooth'); buzz(60);
+    }
+    hellHUD();
+    H.lastTick = performance.now();
+    later(hellTick, 100);
+    later(hellSpawn, 250);
+  });
+  function finishHell() {
+    if (!H) return;
+    H.over = true;
+    clearTimers();
+    $('hell-revive').hidden = true;
+    var score = H.score, correct = H.correct, faults = H.faults;
+    var s = loadSave();
+    var isBest = !s.hellBest || score > s.hellBest;
+    if (isBest) s.hellBest = score;
+    s.hellPlays = (s.hellPlays || 0) + 1;
+    storeSave(s);
+    if (isBest) lbSubmit('hell', score, { correct: correct, faults: faults });
+    addXP(Math.max(5, Math.min(120, Math.round(score / 20)))); // 地狱 XP 封顶 120（真机首测 7913 分实证：不封顶一局顶五局天梯）
+    if (score >= 4000) unlock('hell1500'); // id 沿用旧名保住老存档已解锁记录，门槛按真机量级重定（原 1500/2500 太低）
+    if (score >= 7000) unlock('hell2500');
+    H = null;
+    $('pr-title').textContent = '🔥 地狱 60 秒 · 结果';
+    $('pr-score').textContent = score;
+    $('pr-label').textContent = '地狱得分' + (isBest ? ' · 新纪录！' : ' · 最佳 ' + s.hellBest + ' 分');
+    $('pr-detail').textContent = '答对/忍住 ' + correct + ' 题；失误 ' + faults + ' 次（失误扣时间：手贱/超时 −3s、空点 −2s）。';
+    $('pr-compare').textContent = '地狱不计段位，练的是高压下手不抖。XP 已按得分到账。';
+    $('pr-note').textContent = '地狱 60 秒不计段位，成绩只进地狱最佳与 XP。';
+    $('btn-pr-again').onclick = function () { startHell(); };
+    show('practice');
+  }
+
+  /* ---------- 分享海报（Canvas） ---------- */
+  function drawPoster() {
+    if (!lastResult) return;
+    var c = document.createElement('canvas');
+    c.width = 1080; c.height = 1350;
+    var x = c.getContext('2d');
+    var g = x.createLinearGradient(0, 0, 0, 1350);
+    g.addColorStop(0, '#0b0e14'); g.addColorStop(1, '#131926');
+    x.fillStyle = g; x.fillRect(0, 0, 1080, 1350);
+    x.strokeStyle = '#22d3ee'; x.lineWidth = 6; x.strokeRect(28, 28, 1024, 1294);
+    x.textAlign = 'center';
+    x.fillStyle = '#8b9bb4'; x.font = '44px sans-serif';
+    x.fillText('反 应 天 梯', 540, 130);
+    x.fillStyle = '#e5eef7'; x.font = 'bold 60px sans-serif';
+    x.fillText('四维成绩卡', 540, 215);
+    x.fillStyle = '#22d3ee'; x.font = '900 230px sans-serif';
+    x.fillText(String(lastResult.combo), 540, 480);
+    x.fillStyle = '#8b9bb4'; x.font = '40px sans-serif';
+    x.fillText('综合分 · 段位 ' + lastResult.rankName, 540, 555);
+    var rows = [
+      ['闪击', lastResult.scores.flash + ' 分 · 中位 ' + lastResult.flashMs + 'ms'],
+      ['狙击', lastResult.scores.sniper + ' 分'],
+      ['抉择', lastResult.scores.choice + ' 分'],
+      ['止步', lastResult.scores.stop + ' 分']
+    ];
+    x.textAlign = 'left';
+    rows.forEach(function (r, i) {
+      var y = 690 + i * 105;
+      x.fillStyle = '#e5eef7'; x.font = 'bold 52px sans-serif'; x.fillText(r[0], 150, y);
+      x.fillStyle = '#fbbf24'; x.font = '52px sans-serif'; x.fillText(r[1], 400, y);
+    });
+    x.textAlign = 'center';
+    x.fillStyle = '#f472b6'; x.font = 'bold 46px sans-serif';
+    x.fillText('200ms 是人类，150ms 是天才，你呢？', 540, 1150);
+    x.fillStyle = '#5b6b84'; x.font = '33px sans-serif';
+    x.fillText(device.input + ' · ' + device.bucket + ' · 触控延迟校正 −' + device.corr + 'ms · ' + todayKey(), 540, 1235);
+    var url = c.toDataURL('image/png');
+    $('poster-img').src = url;
+    $('poster-download').href = url;
+    $('poster-overlay').hidden = false;
+    /* 虎扑内可直接发帖（Pages 不显示此按钮） */
+    var postBtn = $('btn-poster-post');
+    if (window.RL_Platform && window.ColorboxAI) {
+      postBtn.hidden = false;
+      postBtn.onclick = function () {
+        postBtn.disabled = true;
+        c.toBlob(function (blob) {
+          var title = '反应天梯 ' + lastResult.combo + ' 分 · ' + lastResult.rankName + '，你敢来战？';
+          var content = '闪击中位 ' + lastResult.flashMs + 'ms，四维综合 ' + lastResult.combo + ' 分（' + lastResult.rankName + '）。200ms 是人类，150ms 是天才，你呢？';
+          window.RL_Platform.postPoster(blob, title, content).then(function (r) {
+            postBtn.disabled = false;
+            toast(r.ok ? '已打开虎扑发帖' : (r.message || '发帖失败，请重试'));
+          });
+        }, 'image/png');
+      };
+    } else {
+      postBtn.hidden = true;
+    }
+  }
+
+  /* ---------- 排行榜（官方模板契约：cloud.auth + cloud.request，code 0 为成功） ---------- */
+  var lbBoard = 'combo_std';
+  var lbAuthed = false;
+  var lbMyName = null;
+  function lbCfg() { return { base: window.ACTIVITY_API_BASE || '', env: window.ACTIVITY_ENV_ID || '' }; }
+  function lbAvailable() { var c = lbCfg(); return !!(c.base && c.env && window.ColorboxAI && window.ColorboxAI.cloud); }
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>'"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[ch]; });
+  }
+  function lbAuth() {
+    if (lbAuthed) return Promise.resolve();
+    var c = lbCfg();
+    return window.ColorboxAI.cloud.auth({ envId: c.env }).then(function (r) {
+      if (!r || (r.code !== 200 && r.code !== 0)) throw new Error((r && r.message) || '请先登录');
+      lbAuthed = true;
+    });
+  }
+  function lbRequest(path, data) {
+    var c = lbCfg();
+    return lbAuth().then(function () {
+      return window.ColorboxAI.cloud.request({ url: c.base + path, method: data ? 'POST' : 'GET', data: data, envId: c.env, auth: true });
+    }).then(function (resp) {
+      if (!resp || resp.statusCode === 401) throw new Error('请先登录');
+      if (resp.statusCode !== 200 || resp.code !== 0) throw new Error((resp && resp.message) || '榜单服务异常');
+      return resp.data;
+    });
+  }
+  function lbDisplayName() {
+    if (lbMyName) return Promise.resolve(lbMyName);
+    var fallback = '虎扑用户';
+    try {
+      var au = window.ColorboxAI && window.ColorboxAI.auth;
+      if (au && typeof au.getUserInfo === 'function') {
+        return Promise.resolve(au.getUserInfo()).then(function (info) {
+          var n = info && info.code === 200 && info.data ? info.data.nickname : null;
+          lbMyName = n ? String(n).slice(0, 40) : fallback;
+          return lbMyName;
+        }).catch(function () { return fallback; });
+      }
+    } catch (e) {}
+    return Promise.resolve(fallback);
+  }
+  /* 成绩同步：仅当本地该榜最佳被刷新才提交；失败静默（本地为准，下次刷新再试） */
+  function lbSubmit(board, score, dims) {
+    if (!lbAvailable()) return;
+    var s = loadSave();
+    s.lbBest = s.lbBest || {};
+    if (score <= (s.lbBest[board] || 0)) return;
+    s.lbBest[board] = score;
+    storeSave(s);
+    lbDisplayName().then(function (name) {
+      return lbRequest('/leaderboard/submit', { board: board, score: score, displayName: name, dims: dims || undefined });
+    }).then(function () {
+      toast('☁️ 成绩已同步到' + lbBoardLabel(board));
+    }).catch(function () {});
+  }
+  function lbBoardLabel(board) {
+    if (board.indexOf('daily_') === 0) return '每日榜 · ' + board.slice(6);
+    return BOARD_NAMES[board] || board;
+  }
+  function lbRowHtml(rank, name, score, me) {
+    return '<div class="lb-row' + (rank <= 3 ? ' top' + rank : '') + (me ? ' me' : '') + '"><span class="lb-rank">' + rank + '</span><span class="lb-name">' + escHtml(name) + (me ? '<span class="me-tag">我</span>' : '') + '</span><span class="lb-score">' + score + '</span></div>';
+  }
+  function openLeaderboard() {
+    lbBoard = boardForCorr(device.corr);
+    show('leaderboard');
+    renderLeaderboard();
+  }
+  function renderLeaderboard() {
+    var board = lbBoard;
+    document.querySelectorAll('.lb-tab').forEach(function (t) {
+      var key = t.getAttribute('data-board') === 'daily' ? 'daily_' + todayKey() : t.getAttribute('data-board');
+      t.classList.toggle('active', key === board);
+    });
+    $('lb-note').textContent = '口径：综合榜按本局校正档分榜（标准 −40ms / 高刷 −25~−32ms）；同分先到者优先；每榜满 30 人后发正式名次。';
+    if (!lbAvailable()) {
+      $('lb-my').textContent = '排行榜在虎扑 App 内开放';
+      $('lb-status').textContent = '当前是站外试玩版，先看你的本机纪录：';
+      var s = loadSave(), rows = [];
+      if (s.bestCombo) rows.push({ name: '综合最佳（本机）', score: s.bestCombo });
+      if (s.daily && s.daily.date === todayKey()) rows.push({ name: '今日每日（本机）', score: s.daily.score });
+      if (s.hellBest) rows.push({ name: '地狱最佳（本机）', score: s.hellBest });
+      $('lb-list').innerHTML = rows.length ? rows.map(function (r, i) { return lbRowHtml(i + 1, r.name, r.score, false); }).join('') : '<div class="lb-status">暂无纪录，先打一局天梯局。</div>';
+      return;
+    }
+    $('lb-my').textContent = '我的名次：加载中…';
+    $('lb-status').textContent = '正在加载' + lbBoardLabel(board) + '…';
+    $('lb-list').innerHTML = '';
+    Promise.all([
+      lbRequest('/leaderboard?board=' + encodeURIComponent(board)),
+      lbRequest('/leaderboard/me?board=' + encodeURIComponent(board))
+    ]).then(function (rs) {
+      var data = rs[0] || {};
+      var entries = Array.isArray(data) ? data : (data.entries || []);
+      var total = Array.isArray(data) ? entries.length : (data.total || entries.length);
+      var mine = rs[1];
+      $('lb-my').textContent = mine ? ('我的名次：第 ' + mine.rank + ' 名 · ' + mine.score + ' 分') : '我的名次：暂未上榜（刷新本榜最佳即可上榜）';
+      $('lb-status').textContent = total < 30 ? ('榜单积累中（' + total + '/30 人）：满 30 人后发正式名次，先到先占坑。') : (lbBoardLabel(board) + ' · 共 ' + total + ' 人');
+      $('lb-list').innerHTML = entries.length ? entries.map(function (e) { return lbRowHtml(e.rank, e.displayName, e.score, e.isCurrent); }).join('') : '<div class="lb-status">暂时还没有成绩，来抢第一。</div>';
+    }).catch(function (err) {
+      $('lb-my').textContent = '我的名次：暂不可用';
+      $('lb-status').textContent = (err && err.message) || '榜单加载失败';
+      $('lb-list').innerHTML = '';
+    });
+  }
+
+  /* ---------- 结算 ---------- */
+  function weakestDim(dims) {
+    var w = 'flash';
+    ['flash', 'sniper', 'choice', 'stop'].forEach(function (d) { if (dims[d].score < dims[w].score) w = d; });
+    return w;
+  }
+  function radarSVG(dims) {
+    var cx = 110, cy = 110, R = 78;
+    var axes = [
+      { d: 'flash', x: 0, y: -1, lx: cx, ly: 18, ta: 'middle' },
+      { d: 'sniper', x: 1, y: 0, lx: 217, ly: cy + 4, ta: 'end' },
+      { d: 'stop', x: 0, y: 1, lx: cx, ly: 208, ta: 'middle' },
+      { d: 'choice', x: -1, y: 0, lx: 3, ly: cy + 4, ta: 'start' }
+    ];
+    var s = '';
+    [0.25, 0.5, 0.75, 1].forEach(function (f) {
+      var pts = axes.map(function (a) { return (cx + a.x * R * f) + ',' + (cy + a.y * R * f); }).join(' ');
+      s += '<polygon points="' + pts + '" fill="none" stroke="#26314a" stroke-width="1"/>';
+    });
+    axes.forEach(function (a) {
+      s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + a.x * R) + '" y2="' + (cy + a.y * R) + '" stroke="#26314a"/>';
+      s += '<text x="' + a.lx + '" y="' + a.ly + '" fill="#8b9bb4" font-size="12" text-anchor="' + a.ta + '">' + NAMES[a.d] + ' ' + dims[a.d].score + '</text>';
+    });
+    var dp = axes.map(function (a) {
+      var f = dims[a.d].score / 1000;
+      return (cx + a.x * R * f) + ',' + (cy + a.y * R * f);
+    }).join(' ');
+    s += '<polygon points="' + dp + '" fill="rgba(34,211,238,.30)" stroke="#22d3ee" stroke-width="2"/>';
+    return s;
+  }
+  function finishLadder() {
+    var dims = session.results;
+    var scores = { flash: dims.flash.score, sniper: dims.sniper.score, choice: dims.choice.score, stop: dims.stop.score };
+    var combo = compositeScore(scores);
+    var s = loadSave();
+    s.plays = (s.plays || 0) + 1;
+    s.history = (s.history || []).concat([combo]).slice(-20);
+    s.lastDims = scores;
+    s.dimBest = s.dimBest || {};
+    Object.keys(scores).forEach(function (d) { if (!s.dimBest[d] || scores[d] > s.dimBest[d]) s.dimBest[d] = scores[d]; });
+    if (!s.bestFlashMs || dims.flash.medianMs < s.bestFlashMs) s.bestFlashMs = dims.flash.medianMs;
+    if (!s.bestSniperScore || scores.sniper > s.bestSniperScore) s.bestSniperScore = scores.sniper;
+    if (!s.bestCombo || combo > s.bestCombo) s.bestCombo = combo;
+    storeSave(s);
+    var med = rankMedian(s.history), r = rankOf(med);
+    $('combo-score').textContent = combo;
+    $('rank-line').innerHTML = '近 ' + Math.min(5, s.history.length) + ' 局中位 ' + med + ' 分 → 段位 <b>' + r.name + '</b>' +
+      (s.history.length < 5 ? '（暂定，满 5 局后按中位数定段）' : '') +
+      (r.next ? '<br>距' + r.next.name + '还差 ' + r.next.need + ' 分（按中位算）' : '<br>已登顶，封神之位');
+    $('radar').innerHTML = radarSVG(dims);
+    $('result-cards').innerHTML = ['flash', 'sniper', 'choice', 'stop'].map(function (d) {
+      return '<div class="rcard"><div class="rcard-name">' + NAMES[d] + '</div><div class="rcard-big"><span>' + dims[d].score + '</span><small>分</small></div><div class="rcard-detail">' + dims[d].detail + '</div></div>';
+    }).join('');
+    var w = weakestDim(dims);
+    $('res-diagnosis').textContent = '诊断 · 最弱项 ' + NAMES[w] + '（' + dims[w].score + ' 分）：' + ADVICE[w];
+    $('res-device').textContent = deviceNote();
+    $('btn-train-weak').textContent = '专练最弱项 · ' + NAMES[w];
+    $('btn-train-weak').onclick = function () { startPractice(w); };
+    /* M3 钩子：幽灵存档 / XP / 成就 / 海报与双倍 XP 广告 */
+    maybeSaveGhost(scores.sniper, dims.sniper.marks);
+    var xpGain = Math.max(10, Math.round(combo / 10));
+    addXP(xpGain);
+    lastResult = { combo: combo, scores: scores, flashMs: dims.flash.medianMs, rankName: r.name, xp: xpGain, xpDoubled: false };
+    $('btn-xp-ad').textContent = '看广告 · 本局 XP 双倍（+' + xpGain + '）';
+    unlock('first_ladder');
+    checkFlashAch(dims.flash);
+    if (scores.sniper >= 900) unlock('sniper900');
+    if (combo >= 800) unlock('combo800');
+    if (med >= 710) unlock('diamond');
+    if (s.plays >= 10) unlock('plays10');
+    lbSubmit(boardForCorr(device.corr), combo, scores);
+    beep(660, 0.12); later(function () { beep(880, 0.12); }, 130); later(function () { beep(1180, 0.2); }, 260);
+    show('result');
+  }
+  function finishPractice(dim, result) {
+    var s = loadSave();
+    addXP(5);
+    if (dim === 'sniper') { maybeSaveGhost(result.score, result.marks); if (result.score >= 900) unlock('sniper900'); }
+    if (dim === 'flash') checkFlashAch(result);
+    $('pr-title').textContent = NAMES[dim] + ' · 专练结果';
+    $('pr-score').textContent = result.score;
+    $('pr-label').textContent = NAMES[dim] + ' 本次得分' + (dim === 'flash' ? '（中位数 ' + result.medianMs + 'ms）' : '');
+    $('pr-detail').textContent = result.detail;
+    var cmp;
+    if (s.lastDims && typeof s.lastDims[dim] === 'number') {
+      var diff = result.score - s.lastDims[dim];
+      cmp = '对比上次天梯局的 ' + NAMES[dim] + '（' + s.lastDims[dim] + ' 分）：' + (diff > 0 ? '进步了 ' + diff + ' 分，短板在补上。' : (diff < 0 ? '低了 ' + (-diff) + ' 分，状态波动很正常，看中位数趋势别看单局。' : '完全持平，稳得可怕。'));
+    } else cmp = '暂无天梯局记录可对比，先打一局天梯局建立基线，专练进步就看得见了。';
+    $('pr-compare').textContent = cmp;
+    $('pr-note').textContent = '专练不计段位、不进天梯中位数，只用来补短板。';
+    $('btn-pr-again').onclick = function () { startPractice(dim); };
+    show('practice');
+  }
+
+  /* ---------- 导航 ---------- */
+  $('btn-ladder').addEventListener('click', startLadder);
+  $('btn-hell').addEventListener('click', startHell);
+  $('btn-ghost').addEventListener('click', startGhost);
+  $('btn-daily').addEventListener('click', function () {
+    var s = loadSave();
+    if (s.daily && s.daily.date === todayKey()) {
+      Ads.show('daily_practice', function (ok) { if (ok) startDaily(false); });
+    } else startDaily(true);
+  });
+  $('btn-hell-revive').addEventListener('click', function () {
+    Ads.show('hell_revive', function (ok) {
+      if (!H || !ok) return;
+      H.revived = true;
+      H.left += 15;
+      H.paused = false;
+      $('hell-revive').hidden = true;
+      $('hell-revive-state').textContent = '已使用';
+      H.lastTick = performance.now();
+      hellHUD();
+      later(hellTick, 100);
+      later(hellSpawn, 500);
+      toast('续命 +15 秒，冲！');
+    });
+  });
+  $('btn-hell-finish').addEventListener('click', function () { if (H) finishHell(); });
+  $('btn-leaderboard').addEventListener('click', openLeaderboard);
+  $('btn-lb-home').addEventListener('click', quitToHome);
+  document.querySelectorAll('.lb-tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      var key = t.getAttribute('data-board');
+      lbBoard = key === 'daily' ? 'daily_' + todayKey() : key;
+      renderLeaderboard();
+    });
+  });
+  $('btn-poster').addEventListener('click', drawPoster);
+  $('btn-poster-close').addEventListener('click', function () { $('poster-overlay').hidden = true; });
+  $('btn-xp-ad').addEventListener('click', function () {
+    if (!lastResult || lastResult.xpDoubled) { toast('本局 XP 双倍已领取'); return; }
+    Ads.show('xp_double', function (ok) {
+      if (!ok || !lastResult || lastResult.xpDoubled) return;
+      lastResult.xpDoubled = true;
+      addXP(lastResult.xp);
+      $('btn-xp-ad').textContent = 'XP 双倍已到账 ✓';
+      toast('双倍 XP 到账 +' + lastResult.xp);
+    });
+  });
+  document.querySelectorAll('.btn-practice').forEach(function (b) {
+    b.addEventListener('click', function () { startPractice(b.getAttribute('data-dim')); });
+  });
+  $('btn-again').addEventListener('click', startLadder);
+  /* 虎扑构建里此按钮是普通 button（无 download 属性，过平台下载门禁）：点它提示长按保存；Pages 版是下载链接不走这里 */
+  $('poster-download').addEventListener('click', function () {
+    if (this.tagName === 'BUTTON') toast('长按上方海报图片即可保存到相册');
+  });
+  $('btn-home').addEventListener('click', quitToHome);
+  $('btn-pr-ladder').addEventListener('click', startLadder);
+  $('btn-pr-home').addEventListener('click', quitToHome);
+  document.querySelectorAll('[data-quit]').forEach(function (b) { b.addEventListener('click', quitToHome); });
+  renderHome();
+  /* 虎扑平台钩子（Pages 无 RL_Platform 时整段跳过）：安全距、云存档恢复、桌面按钮 */
+  if (window.RL_Platform) {
+    window.RL_Platform.applySafeTop();
+    if (window.RL_Platform.desktopAvailable()) {
+      var db = $('btn-desktop');
+      db.hidden = false;
+      db.addEventListener('click', function () {
+        window.RL_Platform.addToDesktop().then(function (r) { if (r && r.message) toast(r.message); });
+      });
+    }
+    window.RL_Platform.restoreCloudIfLocalFresh(loadSave()).then(function (cloud) {
+      if (cloud) {
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(cloud)); } catch (e) {}
+        renderHome();
+        toast('☁️ 已恢复云端存档');
+      }
+    }).catch(function () {});
+  }
+})();
+
+</script>
+</body>
+</html>
